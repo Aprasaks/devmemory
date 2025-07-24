@@ -66,6 +66,9 @@ ${note.content}
     return NextResponse.json({ success: true, path });
   } catch (error) {
     console.error("Failed to save to GitHub:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }

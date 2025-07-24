@@ -13,3 +13,6 @@ export interface GitHubSyncResult {
   path?: string;
   error?: any;
 }
+
+// 에디터 관련 타입들도 export
+export * from "./editor";

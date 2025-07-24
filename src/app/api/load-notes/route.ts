@@ -35,15 +35,23 @@ export async function GET() {
 
                 if (Array.isArray(files)) {
                   for (const file of files) {
-                    if (file.name.endsWith(".md") && file.name !== "README.md") {
-                      const { data: fileData } = await octokit.repos.getContent({
-                        owner: process.env.GITHUB_USERNAME!,
-                        repo: process.env.KNOWLEDGE_REPO!,
-                        path: file.path,
-                      });
+                    if (
+                      file.name.endsWith(".md") &&
+                      file.name !== "README.md"
+                    ) {
+                      const { data: fileData } = await octokit.repos.getContent(
+                        {
+                          owner: process.env.GITHUB_USERNAME!,
+                          repo: process.env.KNOWLEDGE_REPO!,
+                          path: file.path,
+                        },
+                      );
 
                       if ("content" in fileData) {
-                        const content = Buffer.from(fileData.content, "base64").toString();
+                        const content = Buffer.from(
+                          fileData.content,
+                          "base64",
+                        ).toString();
                         const lines = content.split("\n");
 
                         let title = file.name.replace(".md", "");
@@ -54,11 +62,14 @@ export async function GET() {
                           const endIndex = content.indexOf("---", 3);
                           if (endIndex > 0) {
                             const frontMatter = content.substring(4, endIndex);
-                            const titleMatch = frontMatter.match(/title:\s*(.+)/);
+                            const titleMatch =
+                              frontMatter.match(/title:\s*(.+)/);
                             if (titleMatch) {
                               title = titleMatch[1];
                             }
-                            noteContent = content.substring(endIndex + 4).trim();
+                            noteContent = content
+                              .substring(endIndex + 4)
+                              .trim();
                           }
                         }
 
@@ -85,6 +96,9 @@ export async function GET() {
     return NextResponse.json({ success: true, notes });
   } catch (error) {
     console.error("Failed to load notes:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 },
+    );
   }
 }

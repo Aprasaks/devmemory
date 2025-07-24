@@ -5,7 +5,9 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
 
-export const saveNoteToGitHub = async (note: Note): Promise<GitHubSyncResult> => {
+export const saveNoteToGitHub = async (
+  note: Note,
+): Promise<GitHubSyncResult> => {
   try {
     const date = new Date();
     const year = date.getFullYear();

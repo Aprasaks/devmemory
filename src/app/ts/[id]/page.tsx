@@ -60,10 +60,10 @@ interface PostProperties {
   이름?: {
     title: NotionTitle[];
   };
-  카테고리?: {
+  문제유형?: {
     select: NotionSelectOption;
   };
-  태그?: {
+  기술스택?: {
     multi_select: NotionMultiSelectOption[];
   };
   작성일?: {
@@ -80,7 +80,7 @@ interface Post {
   blocks: NotionBlock[];
 }
 
-export default function LearnPostDetail() {
+export default function TSPostDetail() {
   const params = useParams();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,12 +89,12 @@ export default function LearnPostDetail() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await fetch(`/api/learn/${params.id}`);
+        const response = await fetch(`/api/ts/${params.id}`);
         if (response.ok) {
           const data: Post = await response.json();
           setPost(data);
         } else if (response.status === 404) {
-          setError("포스트를 찾을 수 없습니다.");
+          setError("트러블슈팅 포스트를 찾을 수 없습니다.");
         } else {
           setError("포스트를 불러오는 중 오류가 발생했습니다.");
         }
@@ -111,34 +111,34 @@ export default function LearnPostDetail() {
     }
   }, [params.id]);
 
-  // 카테고리별 색상
-  const getCategoryColor = (category: string): string => {
-    switch (category) {
-      case "React":
+  // 문제유형별 색상
+  const getTypeColor = (type: string): string => {
+    switch (type) {
+      case "Error":
+        return "bg-red-500/10 text-red-400 border-red-500/20";
+      case "Build":
+        return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+      case "Deploy":
         return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-      case "Next.js":
-        return "bg-gray-500/10 text-gray-300 border-gray-500/20";
-      case "CSS":
-        return "bg-pink-500/10 text-pink-400 border-pink-500/20";
-      case "JavaScript":
-        return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-      case "TypeScript":
-        return "bg-blue-600/10 text-blue-300 border-blue-600/20";
+      case "Performance":
+        return "bg-green-500/10 text-green-400 border-green-500/20";
+      case "Config":
+        return "bg-purple-500/10 text-purple-400 border-purple-500/20";
       default:
         return "bg-gray-500/10 text-gray-400 border-gray-500/20";
     }
   };
 
-  // 태그 색상
-  const getTagColor = (tag: string): string => {
+  // 기술스택 색상
+  const getTechColor = (tech: string): string => {
     const colors = [
-      "bg-purple-500/10 text-purple-400 border-purple-500/20",
-      "bg-green-500/10 text-green-400 border-green-500/20",
-      "bg-orange-500/10 text-orange-400 border-orange-500/20",
-      "bg-teal-500/10 text-teal-400 border-teal-500/20",
-      "bg-red-500/10 text-red-400 border-red-500/20",
+      "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+      "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+      "bg-pink-500/10 text-pink-400 border-pink-500/20",
+      "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+      "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     ];
-    return colors[tag.length % colors.length];
+    return colors[tech.length % colors.length];
   };
 
   // 노션 블록을 렌더링하는 함수
@@ -201,7 +201,7 @@ export default function LearnPostDetail() {
       case "quote":
         const quoteText = getText(block.quote?.rich_text);
         return (
-          <blockquote className="border-l-4 border-blue-500 pl-4 py-2 mb-4 bg-blue-500/5 text-gray-300 italic">
+          <blockquote className="border-l-4 border-red-500 pl-4 py-2 mb-4 bg-red-500/5 text-gray-300 italic">
             {quoteText}
           </blockquote>
         );
@@ -219,7 +219,7 @@ export default function LearnPostDetail() {
       <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center py-20">
-            <div className="text-white">포스트를 불러오는 중...</div>
+            <div className="text-white">트러블슈팅 포스트를 불러오는 중...</div>
           </div>
         </div>
       </div>
@@ -232,8 +232,8 @@ export default function LearnPostDetail() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center py-20">
             <div className="text-red-400 mb-4">{error}</div>
-            <Link href="/learn" className="text-blue-400 hover:text-blue-300 transition-colors">
-              ← Learn 페이지로 돌아가기
+            <Link href="/ts" className="text-red-400 hover:text-red-300 transition-colors">
+              ← TS 페이지로 돌아가기
             </Link>
           </div>
         </div>
@@ -248,8 +248,8 @@ export default function LearnPostDetail() {
   // 포스트 메타데이터 추출
   const postProperties = post.page.properties;
   const title = postProperties["이름"]?.title?.[0]?.plain_text || "제목 없음";
-  const category = postProperties["카테고리"]?.select?.name || "General";
-  const tags = postProperties["태그"]?.multi_select?.map((tag) => tag.name) || [];
+  const problemType = postProperties["문제유형"]?.select?.name || "General";
+  const techStack = postProperties["기술스택"]?.multi_select?.map((tech) => tech.name) || [];
   const createdAt = postProperties["작성일"]?.date?.start || "";
 
   return (
@@ -258,7 +258,7 @@ export default function LearnPostDetail() {
         {/* 뒤로가기 버튼 */}
         <div className="mb-8">
           <Link
-            href="/learn"
+            href="/ts"
             className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,18 +269,18 @@ export default function LearnPostDetail() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Learn으로 돌아가기
+            TS로 돌아가기
           </Link>
         </div>
 
         {/* 포스트 헤더 */}
         <header className="mb-8">
-          {/* 카테고리 */}
+          {/* 문제유형 */}
           <div className="mb-4">
             <span
-              className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${getCategoryColor(category)}`}
+              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${getTypeColor(problemType)}`}
             >
-              {category}
+              🔧 {problemType}
             </span>
           </div>
 
@@ -290,17 +290,27 @@ export default function LearnPostDetail() {
           {/* 메타 정보 */}
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-6">
             <div>작성일: {new Date(createdAt).toLocaleDateString("ko-KR")}</div>
+            <div className="flex items-center gap-1 text-green-400">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>해결완료</span>
+            </div>
           </div>
 
-          {/* 태그 */}
-          {tags.length > 0 && (
+          {/* 기술스택 */}
+          {techStack.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag, index) => (
+              {techStack.map((tech, index) => (
                 <span
                   key={index}
-                  className={`px-3 py-1 rounded-full text-sm border ${getTagColor(tag)}`}
+                  className={`px-3 py-1 rounded-full text-sm border ${getTechColor(tech)}`}
                 >
-                  #{tag}
+                  {tech}
                 </span>
               ))}
             </div>
@@ -327,10 +337,10 @@ export default function LearnPostDetail() {
         <footer className="mt-16 pt-8 border-t border-gray-800">
           <div className="text-center">
             <Link
-              href="/learn"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              href="/ts"
+              className="inline-flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
             >
-              다른 포스트 보기
+              다른 트러블슈팅 보기
             </Link>
           </div>
         </footer>

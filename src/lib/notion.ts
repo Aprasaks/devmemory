@@ -9,6 +9,7 @@ const notion = new Client({
 // 데이터베이스 ID들
 const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
 const LEARN_DATABASE_ID = process.env.NOTION_LEARN_DB_ID!;
+const TS_DATABASE_ID = process.env.NOTION_TS_DB_ID!;
 
 // Learn Post 타입 정의
 export interface LearnPost {
@@ -17,6 +18,17 @@ export interface LearnPost {
   category: string;
   tags: string[];
   published: boolean;
+  createdAt: string;
+  slug: string;
+}
+
+// TS Post 타입 정의
+export interface TSPost {
+  id: string;
+  title: string;
+  problemType: string;
+  resolved: boolean;
+  techStack: string[];
   createdAt: string;
   slug: string;
 }
@@ -165,7 +177,7 @@ export async function getLearnPosts() {
       const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
       const category = page.properties["카테고리"]?.select?.name || "General";
       const tags = page.properties["태그"]?.multi_select?.map((tag: any) => tag.name) || [];
-      const published = page.properties["Published"]?.checkbox || false;
+      const published = page.properties["작성완료"]?.checkbox || false;
       const createdAt = page.properties["작성일"]?.date?.start || "";
 
       // 슬러그 생성 (제목을 URL에 적합하게 변환)
@@ -268,6 +280,136 @@ export async function getLearnPost(pageId: string) {
     };
   } catch (error) {
     console.error("개별 Learn Post 가져오기 실패:", error);
+    return null;
+  }
+}
+
+// TS (Trouble Shooting) 관련 함수들
+
+// 모든 TS Posts 가져오기 (해결완료된 것만)
+export async function getTSPosts() {
+  try {
+    const response = await notion.databases.query({
+      database_id: TS_DATABASE_ID,
+      filter: {
+        property: "해결상태",
+        checkbox: {
+          equals: true,
+        },
+      },
+      sorts: [
+        {
+          property: "작성일",
+          direction: "descending",
+        },
+      ],
+    });
+
+    const posts: TSPost[] = response.results.map((page: any) => {
+      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
+      const problemType = page.properties["문제유형"]?.select?.name || "General";
+      const techStack =
+        page.properties["기술스택"]?.multi_select?.map((tag: any) => tag.name) || [];
+      const resolved = page.properties["해결상태"]?.checkbox || false;
+      const createdAt = page.properties["작성일"]?.date?.start || "";
+
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .trim();
+
+      return {
+        id: page.id,
+        title,
+        problemType,
+        resolved,
+        techStack,
+        createdAt,
+        slug: slug || page.id,
+      };
+    });
+
+    return posts;
+  } catch (error) {
+    console.error("TS Posts 가져오기 실패:", error);
+    return [];
+  }
+}
+
+// 문제유형별 TS Posts 가져오기
+export async function getTSPostsByType(problemType: string) {
+  try {
+    const response = await notion.databases.query({
+      database_id: TS_DATABASE_ID,
+      filter: {
+        and: [
+          {
+            property: "해결상태",
+            checkbox: {
+              equals: true,
+            },
+          },
+          {
+            property: "문제유형",
+            select: {
+              equals: problemType,
+            },
+          },
+        ],
+      },
+      sorts: [
+        {
+          property: "작성일",
+          direction: "descending",
+        },
+      ],
+    });
+
+    const posts: TSPost[] = response.results.map((page: any) => {
+      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
+      const problemType = page.properties["문제유형"]?.select?.name || "General";
+      const techStack =
+        page.properties["기술스택"]?.multi_select?.map((tag: any) => tag.name) || [];
+      const resolved = page.properties["해결상태"]?.checkbox || false;
+      const createdAt = page.properties["작성일"]?.date?.start || "";
+
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .trim();
+
+      return {
+        id: page.id,
+        title,
+        problemType,
+        resolved,
+        techStack,
+        createdAt,
+        slug: slug || page.id,
+      };
+    });
+
+    return posts;
+  } catch (error) {
+    console.error("문제유형별 TS Posts 가져오기 실패:", error);
+    return [];
+  }
+}
+
+// 개별 TS Post 가져오기
+export async function getTSPost(pageId: string) {
+  try {
+    const page = await notion.pages.retrieve({ page_id: pageId });
+    const blocks = await notion.blocks.children.list({ block_id: pageId });
+
+    return {
+      page,
+      blocks: blocks.results,
+    };
+  } catch (error) {
+    console.error("개별 TS Post 가져오기 실패:", error);
     return null;
   }
 }

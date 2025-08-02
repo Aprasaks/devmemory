@@ -1,10 +1,11 @@
 // src/components/dashboard/Calendar.tsx
 import { useState } from "react";
+import { TodoItem } from "@/lib/notion";
 
 interface CalendarProps {
   selectedDate: number | null;
   onDateSelect: (date: number) => void;
-  todoData: Record<number, any[]>;
+  todoData: Record<number, TodoItem[]>;
 }
 
 export default function Calendar({ selectedDate, onDateSelect, todoData }: CalendarProps) {
@@ -69,7 +70,8 @@ export default function Calendar({ selectedDate, onDateSelect, todoData }: Calen
     // 실제 날짜들
     for (let day = 1; day <= daysInMonth; day++) {
       const isToday = isCurrentMonth && day === currentDate;
-      const hasEvents = todoData[day] && todoData[day].length > 0;
+      const dayTodos = todoData[day];
+      const hasEvents = dayTodos && dayTodos.length > 0;
       const isSelected = selectedDate === day;
 
       days.push(

@@ -11,6 +11,50 @@ const DATABASE_ID = process.env.NOTION_DATABASE_ID!;
 const LEARN_DATABASE_ID = process.env.NOTION_LEARN_DB_ID!;
 const TS_DATABASE_ID = process.env.NOTION_TS_DB_ID!;
 
+// Notion API 타입 정의
+interface NotionRichText {
+  plain_text: string;
+}
+
+interface NotionTitle {
+  title: NotionRichText[];
+}
+
+interface NotionSelect {
+  select: { name: string } | null;
+}
+
+interface NotionMultiSelect {
+  multi_select: { name: string }[];
+}
+
+interface NotionCheckbox {
+  checkbox: boolean;
+}
+
+interface NotionDate {
+  date: { start: string } | null;
+}
+
+interface NotionPageProperties {
+  이름?: NotionTitle;
+  날짜?: NotionDate;
+  완료?: NotionCheckbox;
+  우선순위?: NotionSelect;
+  카테고리?: NotionSelect;
+  태그?: NotionMultiSelect;
+  작성완료?: NotionCheckbox;
+  작성일?: NotionDate;
+  문제유형?: NotionSelect;
+  기술스택?: NotionMultiSelect;
+  해결상태?: NotionCheckbox;
+}
+
+interface NotionPage {
+  id: string;
+  properties: NotionPageProperties;
+}
+
 // Learn Post 타입 정의
 export interface LearnPost {
   id: string;
@@ -58,12 +102,13 @@ export async function getTodosByDate() {
     // 날짜별로 그룹화된 투두 데이터 생성
     const todosByDate: Record<number, TodoItem[]> = {};
 
-    response.results.forEach((page: any) => {
-      if (page.properties) {
-        const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
-        const dateProperty = page.properties["날짜"]?.date?.start;
-        const completed = page.properties["완료"]?.checkbox || false;
-        const priority = page.properties["우선순위"]?.select?.name || "Medium";
+    response.results.forEach((page) => {
+      const notionPage = page as NotionPage;
+      if (notionPage.properties) {
+        const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+        const dateProperty = notionPage.properties["날짜"]?.date?.start;
+        const completed = notionPage.properties["완료"]?.checkbox || false;
+        const priority = notionPage.properties["우선순위"]?.select?.name || "Medium";
 
         if (dateProperty && title) {
           const date = new Date(dateProperty);
@@ -74,7 +119,7 @@ export async function getTodosByDate() {
           }
 
           todosByDate[day].push({
-            id: page.id,
+            id: notionPage.id,
             title,
             date: dateProperty,
             completed,
@@ -173,12 +218,13 @@ export async function getLearnPosts() {
       ],
     });
 
-    const posts: LearnPost[] = response.results.map((page: any) => {
-      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
-      const category = page.properties["카테고리"]?.select?.name || "General";
-      const tags = page.properties["태그"]?.multi_select?.map((tag: any) => tag.name) || [];
-      const published = page.properties["작성완료"]?.checkbox || false;
-      const createdAt = page.properties["작성일"]?.date?.start || "";
+    const posts: LearnPost[] = response.results.map((page) => {
+      const notionPage = page as NotionPage;
+      const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+      const category = notionPage.properties["카테고리"]?.select?.name || "General";
+      const tags = notionPage.properties["태그"]?.multi_select?.map((tag) => tag.name) || [];
+      const published = notionPage.properties["작성완료"]?.checkbox || false;
+      const createdAt = notionPage.properties["작성일"]?.date?.start || "";
 
       // 슬러그 생성 (제목을 URL에 적합하게 변환)
       const slug = title
@@ -188,13 +234,13 @@ export async function getLearnPosts() {
         .trim();
 
       return {
-        id: page.id,
+        id: notionPage.id,
         title,
         category,
         tags,
         published,
         createdAt,
-        slug: slug || page.id,
+        slug: slug || notionPage.id,
       };
     });
 
@@ -234,12 +280,13 @@ export async function getLearnPostsByCategory(category: string) {
       ],
     });
 
-    const posts: LearnPost[] = response.results.map((page: any) => {
-      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
-      const category = page.properties["카테고리"]?.select?.name || "General";
-      const tags = page.properties["태그"]?.multi_select?.map((tag: any) => tag.name) || [];
-      const published = page.properties["작성완료"]?.checkbox || false;
-      const createdAt = page.properties["작성일"]?.date?.start || "";
+    const posts: LearnPost[] = response.results.map((page) => {
+      const notionPage = page as NotionPage;
+      const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+      const category = notionPage.properties["카테고리"]?.select?.name || "General";
+      const tags = notionPage.properties["태그"]?.multi_select?.map((tag) => tag.name) || [];
+      const published = notionPage.properties["작성완료"]?.checkbox || false;
+      const createdAt = notionPage.properties["작성일"]?.date?.start || "";
 
       const slug = title
         .toLowerCase()
@@ -248,13 +295,13 @@ export async function getLearnPostsByCategory(category: string) {
         .trim();
 
       return {
-        id: page.id,
+        id: notionPage.id,
         title,
         category,
         tags,
         published,
         createdAt,
-        slug: slug || page.id,
+        slug: slug || notionPage.id,
       };
     });
 
@@ -305,13 +352,14 @@ export async function getTSPosts() {
       ],
     });
 
-    const posts: TSPost[] = response.results.map((page: any) => {
-      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
-      const problemType = page.properties["문제유형"]?.select?.name || "General";
+    const posts: TSPost[] = response.results.map((page) => {
+      const notionPage = page as NotionPage;
+      const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+      const problemType = notionPage.properties["문제유형"]?.select?.name || "General";
       const techStack =
-        page.properties["기술스택"]?.multi_select?.map((tag: any) => tag.name) || [];
-      const resolved = page.properties["해결상태"]?.checkbox || false;
-      const createdAt = page.properties["작성일"]?.date?.start || "";
+        notionPage.properties["기술스택"]?.multi_select?.map((tag) => tag.name) || [];
+      const resolved = notionPage.properties["해결상태"]?.checkbox || false;
+      const createdAt = notionPage.properties["작성일"]?.date?.start || "";
 
       const slug = title
         .toLowerCase()
@@ -320,13 +368,13 @@ export async function getTSPosts() {
         .trim();
 
       return {
-        id: page.id,
+        id: notionPage.id,
         title,
         problemType,
         resolved,
         techStack,
         createdAt,
-        slug: slug || page.id,
+        slug: slug || notionPage.id,
       };
     });
 
@@ -366,13 +414,14 @@ export async function getTSPostsByType(problemType: string) {
       ],
     });
 
-    const posts: TSPost[] = response.results.map((page: any) => {
-      const title = page.properties["이름"]?.title?.[0]?.plain_text || "";
-      const problemType = page.properties["문제유형"]?.select?.name || "General";
+    const posts: TSPost[] = response.results.map((page) => {
+      const notionPage = page as NotionPage;
+      const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+      const problemType = notionPage.properties["문제유형"]?.select?.name || "General";
       const techStack =
-        page.properties["기술스택"]?.multi_select?.map((tag: any) => tag.name) || [];
-      const resolved = page.properties["해결상태"]?.checkbox || false;
-      const createdAt = page.properties["작성일"]?.date?.start || "";
+        notionPage.properties["기술스택"]?.multi_select?.map((tag) => tag.name) || [];
+      const resolved = notionPage.properties["해결상태"]?.checkbox || false;
+      const createdAt = notionPage.properties["작성일"]?.date?.start || "";
 
       const slug = title
         .toLowerCase()
@@ -381,13 +430,13 @@ export async function getTSPostsByType(problemType: string) {
         .trim();
 
       return {
-        id: page.id,
+        id: notionPage.id,
         title,
         problemType,
         resolved,
         techStack,
         createdAt,
-        slug: slug || page.id,
+        slug: slug || notionPage.id,
       };
     });
 

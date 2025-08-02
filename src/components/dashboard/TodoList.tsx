@@ -19,20 +19,7 @@ interface TodoListProps {
 export default function TodoList({ selectedDate, todos, onClose, onToggleTodo }: TodoListProps) {
   const currentMonth = new Date().getMonth();
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "text-red-400";
-      case "medium":
-        return "text-yellow-400";
-      case "low":
-        return "text-green-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  const getPriorityBgColor = (priority: string) => {
+  const getPriorityBgColor = (priority: "High" | "Medium" | "Low"): string => {
     switch (priority) {
       case "High":
         return "bg-red-400";
@@ -99,7 +86,7 @@ export default function TodoList({ selectedDate, todos, onClose, onToggleTodo }:
       {todos && todos.length > 0 && (
         <div className="mt-6 pt-4 border-t border-gray-700/50">
           <div className="flex justify-between text-sm text-gray-400">
-            <span>완료: {todos.filter((t) => t.completed).length}개</span>
+            <span>완료: {todos.filter((todo) => todo.completed).length}개</span>
             <span>전체: {todos.length}개</span>
           </div>
         </div>

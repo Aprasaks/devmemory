@@ -36,7 +36,7 @@ export default function Header() {
               TS
             </Link>
             <Link 
-              href="/book" 
+              href="/books" 
               className="text-gray-300 hover:text-green-400 transition-colors duration-200 font-medium"
             >
               Book

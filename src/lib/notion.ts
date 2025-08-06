@@ -462,3 +462,147 @@ export async function getTSPost(pageId: string) {
     return null;
   }
 }
+
+// Books 관련 타입 정의
+export interface BookItem {
+  id: string;
+  title: string;
+  category: string;
+  slug: string;
+}
+
+// 책 내부 챕터 타입 정의
+export interface BookChapter {
+  id: string;
+  title: string;
+  tags: string[];
+  date: string | null;
+}
+
+// Books 데이터베이스 ID
+const BOOKS_DATABASE_ID = process.env.NOTION_BOOKS_DB_ID!;
+
+// 모든 책 가져오기
+export async function getBooks(): Promise<BookItem[]> {
+  try {
+    const response = await notion.databases.query({
+      database_id: BOOKS_DATABASE_ID,
+      sorts: [
+        {
+          property: "이름",
+          direction: "ascending",
+        },
+      ],
+    });
+
+    const books: BookItem[] = response.results.map((page) => {
+      const notionPage = page as NotionPage;
+      const title = notionPage.properties["이름"]?.title?.[0]?.plain_text || "";
+      const category = notionPage.properties["카테고리"]?.select?.name || "";
+
+      // 슬러그 생성
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .trim();
+
+      return {
+        id: notionPage.id,
+        title,
+        category,
+        slug: slug || notionPage.id,
+      };
+    });
+
+    return books;
+  } catch (error) {
+    console.error("Books 가져오기 실패:", error);
+    return [];
+  }
+}
+
+// 책 정보와 챕터 목록을 포함한 인터페이스
+export interface BookDetail {
+  page: {
+    id: string;
+    properties: NotionPageProperties;
+  };
+  chapters: BookChapter[];
+}
+
+// 개별 책 가져오기
+export async function getBook(bookId: string): Promise<BookDetail | null> {
+  try {
+    // 책 페이지 정보 가져오기
+    const bookPage = await notion.pages.retrieve({ page_id: bookId });
+
+    // 책 내부 블록 가져오기
+    const blocks = await notion.blocks.children.list({ block_id: bookId });
+
+    // 인라인 데이터베이스 찾기
+    const databaseBlock = blocks.results.find(
+      (block) => (block as { type: string }).type === "child_database"
+    );
+
+    let chapters: BookChapter[] = [];
+
+    // 데이터베이스 블록이 있으면 챕터 목록 가져오기
+    if (databaseBlock && "id" in databaseBlock) {
+      try {
+        const chaptersResponse = await notion.databases.query({
+          database_id: databaseBlock.id,
+          sorts: [
+            {
+              property: "이름",
+              direction: "ascending",
+            },
+          ],
+        });
+
+        chapters = chaptersResponse.results.map((chapter) => {
+          const notionChapter = chapter as NotionPage;
+          const title = notionChapter.properties["이름"]?.title?.[0]?.plain_text || "";
+          const tags = notionChapter.properties["태그"]?.multi_select?.map((tag) => tag.name) || [];
+          const date = notionChapter.properties["날짜"]?.date?.start || null;
+
+          return {
+            id: notionChapter.id,
+            title,
+            tags,
+            date,
+          };
+        });
+      } catch (error) {
+        console.error("책 챕터 가져오기 실패:", error);
+      }
+    }
+
+    return {
+      page: bookPage as { id: string; properties: NotionPageProperties },
+      chapters,
+    };
+  } catch (error) {
+    console.error(`책 정보 가져오기 실패: ${bookId}`, error);
+    return null;
+  }
+}
+
+// 책 챕터 가져오기
+export async function getBookChapter(chapterId: string) {
+  try {
+    // 챕터 페이지 정보 가져오기
+    const chapterPage = await notion.pages.retrieve({ page_id: chapterId });
+
+    // 챕터 내용 가져오기
+    const blocks = await notion.blocks.children.list({ block_id: chapterId });
+
+    return {
+      page: chapterPage as { id: string; properties: NotionPageProperties },
+      blocks: blocks.results,
+    };
+  } catch (error) {
+    console.error(`챕터 정보 가져오기 실패: ${chapterId}`, error);
+    return null;
+  }
+}

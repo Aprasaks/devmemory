@@ -83,17 +83,58 @@ export default function ChapterDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchAllBlocks = async (pageId: string): Promise<NotionBlock[]> => {
+      let allBlocks: NotionBlock[] = [];
+      let hasMore = true;
+      let nextCursor: string | null = null;
+
+      while (hasMore) {
+        try {
+          const url = new URL(`/api/books/chapter/${pageId}/blocks`, window.location.origin);
+          if (nextCursor) {
+            url.searchParams.append("start_cursor", nextCursor);
+          }
+
+          const response = await fetch(url.toString());
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          allBlocks = [...allBlocks, ...data.results];
+          hasMore = data.has_more;
+          nextCursor = data.next_cursor;
+        } catch (error) {
+          console.error("블록 가져오기 실패:", error);
+          throw error;
+        }
+      }
+
+      return allBlocks;
+    };
+
     const fetchChapterDetail = async () => {
       try {
-        const response = await fetch(`/api/books/chapter/${chapterId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setChapter(data);
-        } else if (response.status === 404) {
-          setError("챕터를 찾을 수 없습니다.");
-        } else {
-          setError("챕터 정보를 불러오는 중 오류가 발생했습니다.");
+        // 페이지 정보 가져오기
+        const pageResponse = await fetch(`/api/books/chapter/${chapterId}`);
+        if (!pageResponse.ok) {
+          if (pageResponse.status === 404) {
+            setError("챕터를 찾을 수 없습니다.");
+          } else {
+            setError("챕터 정보를 불러오는 중 오류가 발생했습니다.");
+          }
+          return;
         }
+
+        const pageData = await pageResponse.json();
+
+        // 모든 블록 가져오기 (페이지네이션 처리)
+        const allBlocks = await fetchAllBlocks(chapterId);
+
+        setChapter({
+          page: pageData.page,
+          blocks: allBlocks,
+        });
       } catch (error) {
         console.error("챕터 정보 로딩 실패:", error);
         setError("챕터 정보를 불러오는 중 오류가 발생했습니다.");
@@ -197,7 +238,10 @@ export default function ChapterDetailPage() {
       <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center py-20">
-            <div className="text-white">챕터 정보를 불러오는 중...</div>
+            <div className="text-white flex items-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+              챕터 정보를 불러오는 중...
+            </div>
           </div>
         </div>
       </div>
@@ -285,9 +329,14 @@ export default function ChapterDetailPage() {
         {/* 챕터 내용 */}
         <article className="prose prose-invert max-w-none">
           {chapter.blocks?.length > 0 ? (
-            chapter.blocks.map((block: NotionBlock) => (
-              <div key={block.id}>{renderNotionBlock(block)}</div>
-            ))
+            <div>
+              <div className="text-sm text-gray-500 mb-4">
+                총 {chapter.blocks.length}개 블록 로드됨
+              </div>
+              {chapter.blocks.map((block: NotionBlock) => (
+                <div key={block.id}>{renderNotionBlock(block)}</div>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12 text-gray-400">
               <p>아직 내용이 작성되지 않았습니다.</p>
